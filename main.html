@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse · Crypto P&amp;L Dashboard</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#08080D;
+  --bg-glow-1: rgba(139,92,246,.16);
+  --bg-glow-2: rgba(47,230,167,.10);
+  --surface:#131320;
+  --surface-2:#191928;
+  --surface-3:#1F1F30;
+  --border: rgba(255,255,255,.07);
+  --border-soft: rgba(255,255,255,.045);
+  --text:#F3F3F8;
+  --text-dim:#9C9CB4;
+  --text-faint:#5C5C77;
+
+  --violet:#8B5CF6;
+  --violet-soft: rgba(139,92,246,.16);
+  --violet-line: rgba(139,92,246,.55);
+
+  --mint:#2FE6A7;
+  --mint-soft: rgba(47,230,167,.15);
+
+  --coral:#FF5C77;
+  --coral-soft: rgba(255,92,119,.15);
+
+  --gold:#FFC857;
+  --gold-soft: rgba(255,200,87,.15);
+
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+}
+
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  background:
+    radial-gradient(1100px 600px at 8% -10%, var(--bg-glow-1), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, var(--bg-glow-2), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:'Inter', sans-serif;
+  min-height:100vh;
+  padding-bottom:40px;
+}
+
+.font-display{font-family:'Space Grotesk', sans-serif;}
+.font-mono{font-family:'JetBrains Mono', monospace;}
+
+::selection{ background: var(--violet); color:#fff; }
+
+/* ---------- scrollbar ---------- */
+::-webkit-scrollbar{ height:8px; width:8px; }
+::-webkit-scrollbar-thumb{ background:var(--surface-3); border-radius:8px; }
+::-webkit-scrollbar-track{ background:transparent; }
+
+/* ---------- shell ---------- */
+.shell{ max-width:1360px; margin:0 auto; padding: 22px 24px 0; }
+
+/* ---------- navbar ---------- */
+.pulse-nav{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 6px 4px 26px;
+}
+.brand{ display:flex; align-items:center; gap:10px; font-family:'Space Grotesk'; font-weight:700; font-size:1.15rem; letter-spacing:.02em; }
+.brand-mark{
+  width:30px; height:30px; border-radius:9px;
+  background: linear-gradient(135deg, var(--violet), #C4B5FD 120%);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 6px 18px rgba(139,92,246,.35);
+}
+.brand-mark svg{ width:16px; height:16px; }
+
+.nav-tabs-pulse{
+  display:flex; gap:2px; background:var(--surface); border:1px solid var(--border);
+  padding:5px; border-radius: 999px;
+}
+.nav-tabs-pulse .tab-btn{
+  border:none; background:transparent; color:var(--text-dim);
+  font-size:.86rem; font-weight:600; padding:8px 20px; border-radius:999px;
+  transition: all .18s ease; cursor:pointer;
+}
+.nav-tabs-pulse .tab-btn.active{
+  background: var(--text); color:#0B0B12;
+}
+.nav-tabs-pulse .tab-btn:hover:not(.active){ color:var(--text); }
+
+.profile-chip{ display:flex; align-items:center; gap:10px; }
+.avatar{
+  width:36px; height:36px; border-radius:50%; background:var(--surface-3);
+  border:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+  font-size:.72rem; font-weight:700; font-family:'Space Grotesk';
+}
+.profile-chip .p-name{ font-size:.82rem; font-weight:600; }
+.profile-chip .p-sub{ font-size:.72rem; color:var(--text-faint); }
+
+/* ---------- header ---------- */
+.eyebrow{
+  display:flex; align-items:center; gap:8px;
+  font-size:.72rem; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--text-faint); font-weight:600; margin-bottom:10px;
+}
+.eyebrow .accent{ color:var(--violet); }
+.eyebrow .pulse-icon{ display:inline-flex; }
+.eyebrow .pulse-icon path{
+  stroke: var(--violet);
+  stroke-dasharray: 40;
+  animation: pulseDash 1.8s linear infinite;
+}
+@keyframes pulseDash{
+  0%{ stroke-dashoffset: 40; opacity:.35; }
+  50%{ opacity:1; }
+  100%{ stroke-dashoffset: 0; opacity:.35; }
+}
+
+h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; letter-spacing:-.01em; margin-bottom:6px; }
+.greeting .name{ color:var(--violet); }
+.subtitle{ color:var(--text-dim); font-size:.92rem; margin-bottom: 22px; }
+
+.demo-banner{
+  display:flex; align-items:center; gap:10px;
+  background: var(--gold-soft); border:1px solid rgba(255,200,87,.28);
+  color:#FFDB8E; font-size:.78rem; border-radius: var(--radius-sm);
+  padding: 9px 14px; margin-bottom:18px;
+}
+.demo-banner b{ color:#fff; }
+.demo-banner .btn-close-demo{
+  margin-left:auto; background:none; border:none; color:#FFDB8E; opacity:.6; font-size:1rem; line-height:1; cursor:pointer;
+}
+.demo-banner .btn-close-demo:hover{ opacity:1; }
+
+.btn-refresh{
+  background: var(--surface-2); border:1px solid var(--border); color:var(--text);
+  font-size:.82rem; font-weight:600; border-radius:999px; padding:9px 18px;
+  display:flex; align-items:center; gap:8px; transition: all .15s ease;
+}
+.btn-refresh:hover{ background: var(--surface-3); color:#fff; }
+.btn-refresh svg{ width:14px; height:14px; transition: transform .5s ease; }
+.btn-refresh.spinning svg{ animation: spin .7s linear infinite; }
+@keyframes spin{ to{ transform: rotate(360deg); } }
+
+/* ---------- range pills + sheet connector ---------- */
+.controls-row{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  flex-wrap:wrap; margin-bottom:22px;
+}
+.range-pills{
+  display:flex; gap:4px; background:var(--surface); border:1px solid var(--border);
+  padding:4px; border-radius:999px;
+}
+.range-pills button{
+  border:none; background:transparent; color:var(--text-dim);
+  font-size:.82rem; font-weight:600; padding:8px 16px; border-radius:999px; cursor:pointer;
+  transition: all .15s ease;
+}
+.range-pills button.active{ background: var(--violet); color:#fff; }
+.range-pills button:hover:not(.active){ color:var(--text); }
+
+.sheet-connector{
+  display:flex; align-items:center; gap:10px; background:var(--surface);
+  border:1px solid var(--border); border-radius:999px; padding:6px 8px 6px 16px;
+  flex:1 1 380px; max-width:640px;
+}
+.status-dot{ width:8px; height:8px; border-radius:50%; flex:none; background:var(--text-faint); }
+.status-dot.idle{ background:var(--text-faint); }
+.status-dot.pending{ background:var(--gold); animation: dotPulse 1s ease-in-out infinite; }
+.status-dot.ok{ background:var(--mint); box-shadow:0 0 0 3px var(--mint-soft); }
+.status-dot.error{ background:var(--coral); box-shadow:0 0 0 3px var(--coral-soft); }
+@keyframes dotPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+
+.sheet-connector input{
+  flex:1; background:transparent; border:none; outline:none; color:var(--text-dim);
+  font-family:'JetBrains Mono'; font-size:.76rem; min-width:120px;
+}
+.sheet-connector input:focus{ color:var(--text); }
+.sheet-connector .status-text{ font-size:.76rem; color:var(--text-faint); white-space:nowrap; padding-right:4px; }
+.sheet-connector .btn-sync{
+  background: var(--violet); border:none; color:#fff; font-size:.78rem; font-weight:600;
+  padding:8px 16px; border-radius:999px; white-space:nowrap; transition: background .15s ease;
+}
+.sheet-connector .btn-sync:hover{ background:#7A4CF0; }
+.sheet-help-link{ font-size:.74rem; color:var(--text-faint); text-decoration:underline dotted; cursor:pointer; white-space:nowrap; }
+.sheet-help-link:hover{ color:var(--text-dim); }
+
+.custom-range-box{
+  display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border);
+  border-radius:999px; padding:8px 16px; margin-bottom:14px; flex-wrap:wrap;
+}
+.date-input{
+  background:var(--surface-3); border:1px solid var(--border); color:var(--text);
+  font-family:'JetBrains Mono'; font-size:.78rem; border-radius:8px; padding:6px 10px; outline:none;
+}
+.date-input::-webkit-calendar-picker-indicator{ filter:invert(0.8); }
+
+.cal-nav{ display:flex; align-items:center; gap:10px; }
+.cal-nav-btn{
+  background:var(--surface-3); border:1px solid var(--border); color:var(--text-dim);
+  width:26px; height:26px; border-radius:8px; font-size:.95rem; line-height:1; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition: all .15s ease;
+}
+.cal-nav-btn:hover{ color:var(--text); border-color:rgba(255,255,255,.18); }
+.cal-nav-label{ font-size:.78rem; color:var(--text-dim); font-family:'JetBrains Mono'; min-width:96px; text-align:center; }
+
+.sheet-help-box{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md);
+  padding:16px 18px; margin: -8px 0 22px; font-size:.8rem; color:var(--text-dim); line-height:1.7;
+}
+.sheet-help-box code{ background:var(--surface-3); color:#D8C9FF; padding:1px 6px; border-radius:5px; font-size:.76rem; }
+.sheet-help-box .cols{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 4px; }
+.sheet-help-box .cols span{ background:var(--surface-3); border:1px solid var(--border); padding:3px 10px; border-radius:7px; font-family:'JetBrains Mono'; font-size:.72rem; color:var(--text); }
+
+/* ---------- cards ---------- */
+.card-pulse{
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border:1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 22px; position:relative; overflow:hidden;
+}
+.card-pulse .card-title{ font-size:.92rem; font-weight:600; color:var(--text); margin-bottom:2px; }
+.card-pulse .card-sub{ font-size:.76rem; color:var(--text-faint); }
+
+/* stat cards */
+.stat-card{ display:flex; gap:14px; align-items:flex-start; }
+.stat-icon{
+  width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+  flex:none;
+}
+.stat-icon svg{ width:19px; height:19px; }
+.stat-icon.i-violet{ background:var(--violet-soft); color:var(--violet); }
+.stat-icon.i-mint{ background:var(--mint-soft); color:var(--mint); }
+.stat-icon.i-coral{ background:var(--coral-soft); color:var(--coral); }
+.stat-icon.i-gold{ background:var(--gold-soft); color:var(--gold); }
+.stat-value{ font-family:'Space Grotesk'; font-weight:700; font-size:1.5rem; letter-spacing:-.01em; line-height:1.15; }
+.stat-label{ font-size:.8rem; color:var(--text-dim); margin-top:2px; }
+.stat-sub{ font-size:.72rem; color:var(--text-faint); margin-top:6px; }
+.stat-value.c-mint{ color:var(--mint); }
+.stat-value.c-coral{ color:var(--coral); }
+.stat-value.c-gold{ color:var(--gold); }
+
+/* portfolio chart card */
+.chip-change{
+  display:inline-flex; align-items:center; gap:4px; background:var(--mint-soft); color:var(--mint);
+  font-size:.76rem; font-weight:700; padding:4px 10px; border-radius:999px;
+}
+.chip-change.neg{ background:var(--coral-soft); color:var(--coral); }
+.chart-big-value{ font-family:'Space Grotesk'; font-weight:700; font-size:2rem; }
+.as-of-pill{
+  background:var(--surface-3); border:1px solid var(--border); border-radius:10px;
+  padding:6px 12px; font-family:'JetBrains Mono'; font-size:.75rem; color:var(--text-dim);
+}
+.chart-wrap{ position:relative; margin-top: 10px; }
+.chart-wrap svg{ width:100%; height:auto; display:block; overflow:visible; }
+.chart-axis{ display:flex; justify-content:space-between; font-size:.72rem; color:var(--text-faint); margin-top:4px; font-family:'JetBrains Mono'; }
+.legend-row{ display:flex; gap:16px; margin-top:14px; }
+.legend-row .leg{ display:flex; align-items:center; gap:6px; font-size:.74rem; color:var(--text-dim); }
+.legend-row .dot{ width:9px; height:9px; border-radius:50%; }
+
+.pulse-end-dot{ filter: drop-shadow(0 0 6px var(--violet)); }
+.pulse-end-dot circle.ring{ animation: ringGrow 1.8s ease-out infinite; transform-origin:center; }
+@keyframes ringGrow{
+  0%{ r:4; opacity:.7; }
+  100%{ r:14; opacity:0; }
+}
+
+/* calendar / daily pnl */
+.cal-grid{
+  display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-top:16px;
+}
+.cal-cell{
+  background:var(--surface-3); border:1px solid var(--border-soft); border-radius:11px;
+  padding:8px 8px 9px; cursor:pointer; transition: all .15s ease; min-height:64px;
+}
+.cal-cell:hover{ transform: translateY(-2px); border-color: rgba(255,255,255,.18); }
+.cal-cell.selected{ outline:2px solid var(--violet); outline-offset:1px; }
+.cal-cell .d-num{ font-size:.66rem; color:var(--text-faint); font-family:'JetBrains Mono'; }
+.cal-cell .d-count{ font-family:'Space Grotesk'; font-weight:700; font-size:1.05rem; margin:2px 0 1px; }
+.cal-cell .d-amt{ font-size:.68rem; font-family:'JetBrains Mono'; }
+.cal-cell.profit{ background: var(--mint-soft); border-color: rgba(47,230,167,.22); }
+.cal-cell.profit .d-count{ color:var(--mint); }
+.cal-cell.profit .d-amt{ color:var(--mint); }
+.cal-cell.loss{ background: var(--coral-soft); border-color: rgba(255,92,119,.22); }
+.cal-cell.loss .d-count{ color:var(--coral); }
+.cal-cell.loss .d-amt{ color:var(--coral); }
+.cal-cell.flat .d-count{ color:var(--text-dim); }
+.cal-cell.flat .d-amt{ color:var(--text-faint); }
+
+.cal-detail{
+  margin-top:14px; background:var(--surface-3); border:1px solid var(--border);
+  border-radius:11px; padding:10px 14px; font-size:.78rem; color:var(--text-dim);
+  display:none; align-items:center; justify-content:space-between;
+}
+.cal-detail.show{ display:flex; }
+.cal-detail b{ color:var(--text); }
+
+/* asset performance */
+.asset-filters{ display:flex; gap:6px; background:var(--surface); border:1px solid var(--border); padding:4px; border-radius:999px; }
+.asset-filters button{
+  border:none; background:transparent; color:var(--text-dim); font-size:.76rem; font-weight:600;
+  padding:6px 14px; border-radius:999px; cursor:pointer; transition: all .15s ease;
+}
+.asset-filters button.active{ background:var(--text); color:#0B0B12; }
+
+.asset-row{ display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid var(--border-soft); }
+.asset-row:last-child{ border-bottom:none; padding-bottom:2px; }
+.asset-icon{
+  width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  color:#fff; font-family:'Space Grotesk'; font-weight:700; font-size:.85rem; flex:none;
+}
+.asset-name{ font-weight:600; font-size:.88rem; }
+.asset-ticker{ font-size:.72rem; color:var(--text-faint); }
+.asset-bar-wrap{ flex:1; display:flex; align-items:center; gap:10px; min-width:110px; }
+.asset-bar-track{ flex:1; height:6px; border-radius:99px; background:var(--surface-3); overflow:hidden; }
+.asset-bar-fill{ height:100%; border-radius:99px; }
+.asset-bar-pct{ font-size:.74rem; color:var(--text-dim); font-family:'JetBrains Mono'; width:34px; text-align:right; }
+.asset-value{ text-align:right; min-width:88px; }
+.asset-value .v-num{ font-size:.84rem; font-weight:600; font-family:'JetBrains Mono'; }
+.asset-value .v-lbl{ font-size:.68rem; color:var(--text-faint); }
+.asset-pnl{ text-align:right; min-width:78px; }
+.asset-pnl .v-num{ font-size:.84rem; font-weight:700; font-family:'JetBrains Mono'; }
+.asset-pnl .v-num.pos{ color:var(--mint); }
+.asset-pnl .v-num.neg{ color:var(--coral); }
+.asset-pnl .v-lbl{ font-size:.68rem; color:var(--text-faint); }
+
+/* recent activity */
+.act-row{ display:flex; align-items:center; gap:14px; padding:12px 0; }
+.act-tile{ width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center; flex:none; }
+.act-tile.long{ background:var(--violet-soft); color:var(--violet); }
+.act-tile.short{ background:var(--coral-soft); color:var(--coral); }
+.act-tile.transfer{ background:var(--gold-soft); color:var(--gold); }
+.act-tile svg{ width:17px; height:17px; }
+.act-label{ font-weight:600; font-size:.85rem; }
+.act-time{ font-size:.72rem; color:var(--text-faint); }
+.act-amt{ margin-left:auto; font-family:'JetBrains Mono'; font-weight:700; font-size:.85rem; }
+.act-amt.pos{ color:var(--mint); }
+.act-amt.neg{ color:var(--text-dim); }
+
+.icon-btn{ background:none; border:none; color:var(--text-faint); }
+.icon-btn:hover{ color:var(--text); }
+
+/* tables (assets / activity full tabs) */
+.table-pulse{ width:100%; border-collapse:separate; border-spacing:0; font-size:.84rem; }
+.table-pulse thead th{
+  text-align:left; color:var(--text-faint); font-weight:600; font-size:.7rem; letter-spacing:.08em;
+  text-transform:uppercase; padding: 10px 14px; border-bottom:1px solid var(--border);
+}
+.table-pulse tbody td{ padding: 13px 14px; border-bottom:1px solid var(--border-soft); vertical-align:middle; }
+.table-pulse tbody tr:hover{ background: rgba(255,255,255,.02); }
+.badge-type{ font-size:.68rem; font-weight:700; padding:4px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.03em; }
+.badge-type.long{ background:var(--violet-soft); color:#C9B4FF; }
+.badge-type.short{ background:var(--coral-soft); color:var(--coral); }
+.badge-type.transfer{ background:var(--gold-soft); color:var(--gold); }
+
+/* footer */
+.pulse-footer{
+  display:flex; justify-content:space-between; align-items:center; padding: 22px 6px 4px;
+  font-size:.74rem; color:var(--text-faint); font-family:'JetBrains Mono'; flex-wrap:wrap; gap:8px;
+}
+
+.section-pane{ display:none; }
+.section-pane.active{ display:block; }
+
+@media (max-width: 991px){
+  .cal-grid{ grid-template-columns:repeat(5,1fr); }
+  h1.greeting{ font-size:1.6rem; }
+}
+@media (max-width: 767px){
+  .pulse-nav{ flex-wrap:wrap; gap:14px; }
+  .nav-tabs-pulse{ order:3; width:100%; justify-content:center; }
+  .cal-grid{ grid-template-columns:repeat(4,1fr); }
+  .controls-row{ flex-direction:column; align-items:stretch; }
+  .asset-row{ flex-wrap:wrap; }
+  .asset-bar-wrap{ order:5; width:100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- NAVBAR -->
+  <div class="pulse-nav">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h4l2-7 4 14 2-7h6" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span>Pulse</span>
+    </div>
+
+    <div class="nav-tabs-pulse" id="mainTabs">
+      <button class="tab-btn active" data-pane="overview">Overview</button>
+      <button class="tab-btn" data-pane="assets">Assets</button>
+      <button class="tab-btn" data-pane="activity">Activity</button>
+    </div>
+
+    <div class="profile-chip">
+      <div class="avatar" id="avatarInitials">GS</div>
+      <div>
+        <div class="p-name" id="profileName">GS Rathore</div>
+        <div class="p-sub">Personal portfolio</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div>
+      <div class="eyebrow">
+        <svg class="pulse-icon" width="26" height="14" viewBox="0 0 26 14" fill="none"><path d="M1 7h5l2-6 4 12 2-9 2 3h9" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        PERSONAL WEALTH / <span class="accent" id="rangeLabel">This month</span>
+      </div>
+      <h1 class="greeting"><span id="greetingWord">Good evening</span>, <span class="name" id="greetingName">GS Rathore</span></h1>
+      <div class="subtitle">Track your crypto performance in Indian Rupees.</div>
+    </div>
+    <button class="btn-refresh" id="btnRefresh">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>
+      Refresh data
+    </button>
+  </div>
+
+  <div class="demo-banner" id="demoBanner">
+    <span>●</span>
+    <span>Showing <b>sample data</b> — connect your Google Sheet below to see your real numbers.</span>
+    <button class="btn-close-demo" id="closeDemoBanner">&times;</button>
+  </div>
+
+  <!-- RANGE + SHEET CONNECTOR -->
+  <div class="controls-row">
+    <div class="range-pills" id="rangePills">
+      <button data-range="today">Today</button>
+      <button data-range="week">This week</button>
+      <button class="active" data-range="month">This month</button>
+      <button data-range="year">This year</button>
+      <button data-range="custom">Custom</button>
+    </div>
+
+    <div class="sheet-connector">
+      <span class="status-dot idle" id="statusDot"></span>
+      <input type="text" id="sheetUrlInput" value="https://docs.google.com/spreadsheets/d/1vHGx2A14WFwsTEwFN7i3OKhhf3PlLJT2uoJBNUaZRLM/edit?usp=sharing" spellcheck="false">
+      <span class="status-text" id="statusText">Demo data</span>
+      <button class="btn-sync" id="btnSync">Sync sheet</button>
+    </div>
+  </div>
+
+  <div class="custom-range-box" id="customRangeBox" style="display:none;">
+    <span class="card-sub" style="margin-right:2px;">From</span>
+    <input type="date" id="customFrom" class="date-input">
+    <span class="card-sub">to</span>
+    <input type="date" id="customTo" class="date-input">
+    <button class="btn-sync" id="btnApplyCustom">Apply range</button>
+  </div>
+
+  <div class="text-end mb-2" style="margin-top:-14px;">
+    <span class="sheet-help-link" id="toggleHelp">How does sheet sync work?</span>
+  </div>
+
+  <div class="sheet-help-box" id="sheetHelp" style="display:none;">
+    Share the Google Sheet with <b>“Anyone with the link can view”</b>, then paste its URL above and hit <b>Sync sheet</b>.
+    Pulse reads the <code>Dashboard-data</code> tab specifically and expects these columns (any order, any casing):
+    <div class="cols">
+      <span>Date</span><span>Asset</span><span>Side</span><span>Margin</span><span>Fees</span><span>Entry Price</span><span>Exit Price</span><span>PnL</span>
+    </div>
+    <b>Side</b> is <code>Long</code>, <code>Short</code> or <code>Transfer</code>. <b>Margin</b> is the capital you put up for that
+    position in ₹ (drives Total amount &amp; allocation). <b>PnL</b> is treated as already net of fees, so it's used as-is —
+    <code>Fees</code> is still parsed and shown for reference but isn't subtracted again. <b>Entry Price</b> / <b>Exit Price</b>
+    show up in the Activity tab. Optional <code>Leverage</code> and <code>Status</code> columns are picked up too if present; rows with <code>Status = Open</code> are
+    left out of realised totals until closed. Everything on this page — totals, the daily grid, the chart and the asset list —
+    is recalculated live from those rows.
+  </div>
+
+  <!-- ===================== OVERVIEW PANE ===================== -->
+  <div class="section-pane active" id="pane-overview">
+
+    <!-- STAT CARDS -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3">
+        <div class="card-pulse stat-card">
+          <div class="stat-icon i-violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h9M6 8h9M9 3v18M6 13h6a3 3 0 0 0 0-6"/></svg></div>
+          <div>
+            <div class="stat-value" id="statTotal">₹0</div>
+            <div class="stat-label">Total amount</div>
+            <div class="stat-sub" id="statTotalSub">0 trades</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="card-pulse stat-card">
+          <div class="stat-icon i-mint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></div>
+          <div>
+            <div class="stat-value c-mint" id="statWin">₹0</div>
+            <div class="stat-label">Win amount</div>
+            <div class="stat-sub" id="statWinSub">0 wins</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="card-pulse stat-card">
+          <div class="stat-icon i-coral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10M17 7v8H9"/></svg></div>
+          <div>
+            <div class="stat-value c-coral" id="statLoss">₹0</div>
+            <div class="stat-label">Loss amount</div>
+            <div class="stat-sub" id="statLossSub">0 losses</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="card-pulse stat-card">
+          <div class="stat-icon i-gold"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4L12 2z"/></svg></div>
+          <div>
+            <div class="stat-value c-gold" id="statNet">₹0</div>
+            <div class="stat-label">Net profit</div>
+            <div class="stat-sub" id="statNetSub">0% win rate</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHART + CALENDAR -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-7">
+        <div class="card-pulse h-100">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+              <div class="card-title">Portfolio value</div>
+              <div class="d-flex align-items-center gap-2 mt-2">
+                <span class="chart-big-value" id="chartBigValue">₹0</span>
+                <span class="chip-change" id="chartChip">↗ 0%</span>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="card-sub mb-1">As of</div>
+              <div class="as-of-pill" id="asOfDate">30-08-2026</div>
+            </div>
+          </div>
+
+          <div class="chart-wrap">
+            <svg id="chartSvg" viewBox="0 0 960 300" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="chart-axis" id="chartAxis"></div>
+          <div class="legend-row">
+            <span class="leg"><span class="dot" style="background:var(--violet)"></span>Portfolio value</span>
+            <span class="leg"><span class="dot" style="background:var(--gold)"></span>Capital invested</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="card-pulse h-100">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="card-title">Daily profit &amp; loss</div>
+            <div class="cal-nav">
+              <button class="cal-nav-btn" id="calPrev" aria-label="Previous month">&#8249;</button>
+              <span class="cal-nav-label" id="calMonthLabel">August 2026</span>
+              <button class="cal-nav-btn" id="calNext" aria-label="Next month">&#8250;</button>
+            </div>
+          </div>
+          <div class="chart-big-value mt-2" id="dailyNet" style="font-size:1.7rem;">+₹0</div>
+          <div class="card-sub" id="dailyTotalCount">0 total</div>
+
+          <div class="cal-grid" id="calGrid"></div>
+
+          <div class="cal-detail" id="calDetail">
+            <span id="calDetailText">Select a date</span>
+            <span id="calDetailAmt"></span>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="legend-row mb-0">
+              <span class="leg"><span class="dot" style="background:var(--mint)"></span>Profit</span>
+              <span class="leg"><span class="dot" style="background:var(--coral)"></span>Loss</span>
+            </div>
+            <span class="card-sub">Tap a day for details</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ASSETS + ACTIVITY -->
+    <div class="row g-3">
+      <div class="col-lg-7">
+        <div class="card-pulse h-100">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="card-title">Asset performance</div>
+            <div class="asset-filters" id="assetFilters"></div>
+          </div>
+          <div id="assetList" class="mt-2"></div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card-pulse h-100">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="card-title">Recent activity</div>
+            <button class="icon-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>
+          </div>
+          <div id="activityList" class="mt-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== ASSETS PANE ===================== -->
+  <div class="section-pane" id="pane-assets">
+    <div class="card-pulse">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div class="card-title">All assets</div>
+        <span class="card-sub" id="assetsTabSub">0 holdings</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table-pulse">
+          <thead>
+            <tr>
+              <th>Asset</th><th>Trades</th><th>Allocation</th><th>Value</th><th>P&amp;L</th>
+            </tr>
+          </thead>
+          <tbody id="assetsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== ACTIVITY PANE ===================== -->
+  <div class="section-pane" id="pane-activity">
+    <div class="card-pulse">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div class="card-title">All activity</div>
+        <span class="card-sub" id="activityTabSub">0 transactions</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table-pulse">
+          <thead>
+            <tr>
+              <th>Date</th><th>Asset</th><th>Side</th><th>Entry &rarr; Exit</th><th>Margin</th><th>P&amp;L</th>
+            </tr>
+          </thead>
+          <tbody id="activityTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="pulse-footer">
+    <span id="footerSync">Showing sample data</span>
+    <span id="footerCurrency">₹ INR · 30 Aug 2026</span>
+  </div>
+
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+$(function(){
+
+/* ============================================================
+   CONFIG
+   ============================================================ */
+var SHEET_TAB_NAME = 'Dashboard-data'; // Pulse reads this specific tab, not whichever loads first
+
+var ASSET_META = {
+  BTC:  { name:'Bitcoin',   color:'#F7931A' },
+  ETH:  { name:'Ethereum',  color:'#8B5CF6' },
+  SOL:  { name:'Solana',    color:'#2FE6A7' },
+  USDC: { name:'USD Coin',  color:'#3B9EFF' },
+  LINK: { name:'Chainlink', color:'#5570E8' },
+  DOGE: { name:'Dogecoin',  color:'#FFC857' },
+  XRP:  { name:'XRP',       color:'#6B7280' }
+};
+function assetMeta(ticker){
+  var t = (ticker||'').toUpperCase();
+  return ASSET_META[t] || { name:t, color:'#6B7280' };
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+var STATE = {
+  mode: 'demo',          // 'demo' | 'live' — only affects the banner/footer copy now
+  trades: [],            // {date:Date, asset, type, value, pnl}
+  range: 'month',
+  selectedDay: null,
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  customFrom: null,
+  customTo: null
+};
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+function inr(n, withSign){
+  n = Math.round(n || 0);
+  var abs = Math.abs(n);
+  var str = '\u20B9' + abs.toLocaleString('en-IN');
+  if(withSign) return (n < 0 ? '-' : '+') + str;
+  return (n < 0 ? '-' + str : str);
+}
+function compactK(n){
+  n = Math.round(n || 0);
+  if(n === 0) return '\u2014';
+  var v = Math.round(Math.abs(n) / 1000);
+  var label = v === 0 ? (Math.abs(n) + '') : (v + 'k');
+  return (n < 0 ? '-' : '+') + label;
+}
+function pad2(n){ return n < 10 ? '0'+n : ''+n; }
+function fmtDMY(d){ return pad2(d.getDate())+'-'+pad2(d.getMonth()+1)+'-'+d.getFullYear(); }
+function fmtShort(d){
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return pad2(d.getDate())+' '+months[d.getMonth()];
+}
+function extractSheetId(url){
+  var m = (url||'').match(/\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : null;
+}
+function smoothPath(points){
+  if(points.length < 2) return '';
+  var d = 'M ' + points[0].x + ' ' + points[0].y;
+  for(var i=0;i<points.length-1;i++){
+    var p0 = points[i-1] || points[i];
+    var p1 = points[i];
+    var p2 = points[i+1];
+    var p3 = points[i+2] || p2;
+    var cp1x = p1.x + (p2.x - p0.x)/6;
+    var cp1y = p1.y + (p2.y - p0.y)/6;
+    var cp2x = p2.x - (p3.x - p1.x)/6;
+    var cp2y = p2.y - (p3.y - p1.y)/6;
+    d += ' C ' + cp1x + ' ' + cp1y + ', ' + cp2x + ' ' + cp2y + ', ' + p2.x + ' ' + p2.y;
+  }
+  return d;
+}
+
+/* ============================================================
+   DEMO DATA (illustrative only — replaced once a sheet syncs)
+   ============================================================ */
+var DEMO_DAILY = [
+  [1,3,18000],[2,2,-6000],[3,0,0],[4,4,13000],[5,2,8000],[6,1,-3000],[7,5,23000],
+  [8,3,9000],[9,2,-9000],[10,4,15000],[11,0,0],[12,1,-5000],[13,3,18000],[14,2,7000],
+  [15,1,-2000],[16,3,12000],[17,6,26000],[18,2,-10000],[19,4,17000],[20,2,6000],
+  [21,0,0],[22,1,-5000],[23,3,14000],[24,5,20000],[25,1,-4000],[26,3,10000],[27,4,16000],
+  [28,1,-3000],[29,5,22000],[30,7,31000]
+];
+
+function buildDemoTrades(){
+  var trades = [];
+  DEMO_DAILY.forEach(function(row){
+    var day = row[0], count = row[1], net = row[2];
+    if(count === 0) return;
+    var per = net / count;
+    var tickers = Object.keys(ASSET_META);
+    for(var i=0;i<count;i++){
+      var t = tickers[(day*7 + i*3) % 5];
+      var type = i % 2 === 0 ? 'long' : 'short';
+      var val = Math.round(Math.abs(per) * (2 + (i % 3)) + 500);
+      trades.push({
+        date: new Date(2026, 7, day),
+        asset: t,
+        type: type,
+        value: val,
+        pnl: Math.round(per),
+        leverage: [5,10,20][(day+i)%3] + 'x'
+      });
+    }
+  });
+  return trades;
+}
+
+/* ============================================================
+   DATA AGGREGATION (works for both demo + live sheet rows)
+   ============================================================ */
+function filterByRange(trades, range){
+  var now = new Date();
+  var start, end = now;
+  if(range === 'today'){
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if(range === 'week'){
+    start = new Date(now); start.setDate(now.getDate() - 6);
+  } else if(range === 'year'){
+    start = new Date(now.getFullYear(), 0, 1);
+  } else if(range === 'custom'){
+    start = STATE.customFrom || new Date(now.getFullYear(), now.getMonth(), 1);
+    end = STATE.customTo || now;
+    end = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59);
+  } else {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  return trades.filter(function(t){ return t.date >= start && t.date <= end; });
+}
+
+function computeStats(trades){
+  var wins = trades.filter(function(t){ return t.pnl > 0; });
+  var losses = trades.filter(function(t){ return t.pnl < 0; });
+  var winAmount = wins.reduce(function(s,t){ return s + t.pnl; }, 0);
+  var lossAmount = losses.reduce(function(s,t){ return s + t.pnl; }, 0);
+  var netProfit = winAmount + lossAmount;
+  var winRate = (wins.length + losses.length) ? Math.round(wins.length/(wins.length+losses.length)*100) : 0;
+  return { count:trades.length, wins:wins.length, losses:losses.length, winAmount:winAmount, lossAmount:lossAmount, netProfit:netProfit, winRate:winRate };
+}
+
+function aggregateAssets(trades){
+  // Futures: "value" is margin deployed — always a positive capital commitment,
+  // whether the position was Long or Short (no netting between the two).
+  var map = {};
+  trades.forEach(function(t){
+    var k = (t.asset||'').toUpperCase();
+    if(!k || t.type === 'transfer') return;
+    if(!map[k]) map[k] = { ticker:k, value:0, pnl:0, trades:0 };
+    map[k].value += Math.abs(t.value);
+    map[k].pnl += (t.pnl || 0);
+    map[k].trades += 1;
+  });
+  var list = Object.keys(map).map(function(k){ return map[k]; });
+  var total = list.reduce(function(s,a){ return s + a.value; }, 0) || 1;
+  list.forEach(function(a){ a.alloc = Math.round(a.value/total*100); });
+  list.sort(function(a,b){ return b.value - a.value; });
+  return list;
+}
+
+function aggregateDaily(trades, year, month){
+  var map = {};
+  trades.forEach(function(t){
+    if(t.date.getFullYear() !== year || t.date.getMonth() !== month) return;
+    var d = t.date.getDate();
+    if(!map[d]) map[d] = { day:d, count:0, net:0 };
+    map[d].count += 1;
+    map[d].net += (t.pnl || 0);
+  });
+  var daysInMonth = new Date(year, month+1, 0).getDate();
+  var out = [];
+  for(var d=1; d<=daysInMonth; d++){
+    out.push(map[d] || { day:d, count:0, net:0 });
+  }
+  return out;
+}
+
+/* ============================================================
+   RENDER: header / stats
+   ============================================================ */
+var RANGE_LABELS = { today:'Today', week:'This week', month:'This month', year:'This year' };
+function currentRangeLabel(){
+  if(STATE.range === 'custom' && STATE.customFrom && STATE.customTo){
+    return fmtShort(STATE.customFrom) + ' \u2013 ' + fmtShort(STATE.customTo);
+  }
+  return RANGE_LABELS[STATE.range] || 'Custom range';
+}
+
+function renderGreeting(){
+  var h = new Date().getHours();
+  var word = h < 12 ? 'Good morning' : (h < 18 ? 'Good afternoon' : 'Good evening');
+  $('#greetingWord').text(word);
+}
+
+function renderStats(filtered, allAssets){
+  var s = computeStats(filtered);
+  var total = allAssets.reduce(function(sum,a){ return sum + a.value; }, 0);
+
+  $('#statTotal').text(inr(total));
+  $('#statTotalSub').text(s.count + ' trades');
+  $('#statWin').text(inr(s.winAmount));
+  $('#statWinSub').text(s.wins + ' wins');
+  $('#statLoss').text(inr(s.lossAmount));
+  $('#statLossSub').text(s.losses + ' losses');
+  $('#statNet').text(inr(s.netProfit, true));
+  $('#statNetSub').text(s.winRate + '% win rate');
+  $('#chartBigValue').text(inr(total));
+  var chip = s.netProfit >= 0;
+  $('#chartChip').html((chip?'&#8599; ':'&#8600; ') + Math.abs(s.winRate) + '%').toggleClass('neg', !chip);
+
+  $('#rangeLabel').text(currentRangeLabel());
+  $('#asOfDate').text(fmtDMY(new Date()));
+}
+
+/* ============================================================
+   RENDER: chart
+   ============================================================ */
+function renderChart(filtered){
+  var W = 960, H = 300, padL = 8, padR = 8, padT = 20, padB = 14;
+  var valueSeries, costSeries, labels;
+
+  var series = filtered.slice().sort(function(a,b){ return a.date-b.date; });
+  if(series.length === 0){ series = STATE.trades.slice().sort(function(a,b){ return a.date-b.date; }); }
+  var byDay = {};
+  series.forEach(function(t){
+    var key = fmtDMY(t.date);
+    if(!byDay[key]) byDay[key] = { pnl:0, invested:0, date:t.date };
+    byDay[key].pnl += (t.pnl||0);
+    // "Capital invested" tracks margin deployed that day (transfers move cash, not margin).
+    byDay[key].invested += (t.type === 'transfer') ? 0 : t.value;
+  });
+  var keys = Object.keys(byDay).sort(function(a,b){ return byDay[a].date - byDay[b].date; });
+  var base = 0, cumPnl = 0, cumInvested = 0;
+  valueSeries = []; costSeries = []; labels = [];
+  keys.forEach(function(k){
+    cumPnl += byDay[k].pnl;
+    cumInvested += byDay[k].invested;
+    valueSeries.push(base + cumInvested + cumPnl);
+    costSeries.push(base + cumInvested);
+    labels.push(fmtShort(byDay[k].date));
+  });
+  if(valueSeries.length < 2){ valueSeries = [0,0]; costSeries=[0,0]; labels=['','']; }
+
+  var allVals = valueSeries.concat(costSeries);
+  var min = Math.min.apply(null, allVals), max = Math.max.apply(null, allVals);
+  if(min === max){ min -= 100; max += 100; }
+  var range = (max - min) * 1.15;
+  min = min - (range-(max-min))/2;
+
+  function mapPoints(series){
+    var n = series.length;
+    return series.map(function(v,i){
+      var x = padL + (i/(n-1)) * (W - padL - padR);
+      var y = padT + (1 - (v-min)/range) * (H - padT - padB);
+      return { x:x, y:y };
+    });
+  }
+
+  var vPts = mapPoints(valueSeries);
+  var cPts = mapPoints(costSeries);
+  var last = vPts[vPts.length-1];
+
+  var svg = '';
+  svg += '<defs>' +
+           '<linearGradient id="fillViolet" x1="0" y1="0" x2="0" y2="1">' +
+             '<stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.22"/>' +
+             '<stop offset="100%" stop-color="#8B5CF6" stop-opacity="0"/>' +
+           '</linearGradient>' +
+         '</defs>';
+
+  var areaPath = smoothPath(vPts) + ' L ' + vPts[vPts.length-1].x + ' ' + (H-padB) + ' L ' + vPts[0].x + ' ' + (H-padB) + ' Z';
+  svg += '<path d="'+areaPath+'" fill="url(#fillViolet)" stroke="none"></path>';
+  svg += '<path d="'+smoothPath(cPts)+'" fill="none" stroke="#FFC857" stroke-width="2.5" stroke-linecap="round"></path>';
+  svg += '<path d="'+smoothPath(vPts)+'" fill="none" stroke="#8B5CF6" stroke-width="3" stroke-linecap="round"></path>';
+  svg += '<g class="pulse-end-dot">' +
+           '<circle class="ring" cx="'+last.x+'" cy="'+last.y+'" r="4" fill="none" stroke="#8B5CF6" stroke-width="1.6"></circle>' +
+           '<circle cx="'+last.x+'" cy="'+last.y+'" r="5" fill="#8B5CF6" stroke="#0B0B12" stroke-width="2"></circle>' +
+         '</g>';
+
+  $('#chartSvg').html(svg);
+
+  // axis: show ~5 evenly spaced labels
+  var axisLabels = [];
+  var step = Math.max(1, Math.floor(labels.length/5));
+  for(var i=0;i<labels.length;i+=step){ axisLabels.push(labels[i]); }
+  if(axisLabels[axisLabels.length-1] !== labels[labels.length-1]) axisLabels.push(labels[labels.length-1]);
+  $('#chartAxis').html(axisLabels.map(function(l){ return '<span>'+l+'</span>'; }).join(''));
+}
+
+/* ============================================================
+   RENDER: daily P&L calendar
+   ============================================================ */
+function renderCalendar(){
+  var $grid = $('#calGrid').empty();
+
+  var year = STATE.calYear, month = STATE.calMonth;
+  var cells = aggregateDaily(STATE.trades, year, month);
+  var monthTotal = cells.reduce(function(s,c){ return s+c.net; }, 0);
+  var monthCount = cells.reduce(function(s,c){ return s+c.count; }, 0);
+  $('#dailyNet').text(inr(monthTotal, true));
+  $('#dailyTotalCount').text(monthCount + ' total');
+
+  var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  $('#calMonthLabel').text(MONTH_NAMES[month] + ' ' + year);
+
+  cells.forEach(function(c){
+    var cls = c.count === 0 ? 'flat' : (c.net >= 0 ? 'profit' : 'loss');
+    var $cell = $(
+      '<div class="cal-cell '+cls+'" data-day="'+c.day+'" data-count="'+c.count+'" data-net="'+c.net+'">' +
+        '<div class="d-num">'+c.day+'</div>' +
+        '<div class="d-count">'+c.count+'</div>' +
+        '<div class="d-amt">'+compactK(c.net)+'</div>' +
+      '</div>'
+    );
+    $grid.append($cell);
+  });
+  $('#calDetail').removeClass('show');
+}
+
+$('#calPrev').on('click', function(){
+  STATE.calMonth -= 1;
+  if(STATE.calMonth < 0){ STATE.calMonth = 11; STATE.calYear -= 1; }
+  renderCalendar();
+});
+$('#calNext').on('click', function(){
+  STATE.calMonth += 1;
+  if(STATE.calMonth > 11){ STATE.calMonth = 0; STATE.calYear += 1; }
+  renderCalendar();
+});
+
+$(document).on('click', '.cal-cell', function(){
+  $('.cal-cell').removeClass('selected');
+  $(this).addClass('selected');
+  var day = $(this).data('day'), count = $(this).data('count'), net = $(this).data('net');
+  $('#calDetailText').html('Day <b>'+day+'</b> &middot; <b>'+count+'</b> trade'+(count===1?'':'s'));
+  $('#calDetailAmt').html('<span style="color:'+(net>=0?'var(--mint)':'var(--coral)')+';font-weight:700;">'+inr(net, true)+'</span>');
+  $('#calDetail').addClass('show');
+});
+
+/* ============================================================
+   RENDER: asset performance (overview list + filters + full tab)
+   ============================================================ */
+var assetFilterActive = 'ALL';
+
+function renderAssetFilters(assets){
+  var $f = $('#assetFilters').empty();
+  var tickers = assets.map(function(a){ return a.ticker; });
+  var opts = ['ALL'].concat(tickers.slice(0,3));
+  opts.forEach(function(t){
+    var $b = $('<button>'+(t==='ALL'?'All':t)+'</button>');
+    if(t === assetFilterActive) $b.addClass('active');
+    $b.on('click', function(){
+      assetFilterActive = t;
+      $('#assetFilters button').removeClass('active');
+      $(this).addClass('active');
+      renderAssetList(assets);
+    });
+    $f.append($b);
+  });
+}
+
+function renderAssetList(assets){
+  var $list = $('#assetList').empty();
+  var filtered = assetFilterActive === 'ALL' ? assets : assets.filter(function(a){ return a.ticker === assetFilterActive; });
+
+  filtered.forEach(function(a){
+    var meta = assetMeta(a.ticker);
+    var pnlCls = a.pnl > 0 ? 'pos' : (a.pnl < 0 ? 'neg' : '');
+    var row = $(
+      '<div class="asset-row">' +
+        '<div class="asset-icon" style="background:'+meta.color+'">'+a.ticker.charAt(0)+'</div>' +
+        '<div style="min-width:92px;">' +
+          '<div class="asset-name">'+a.ticker+'</div>' +
+          '<div class="asset-ticker">'+meta.name+'</div>' +
+        '</div>' +
+        '<div class="asset-bar-wrap">' +
+          '<div class="asset-bar-track"><div class="asset-bar-fill" style="width:'+a.alloc+'%;background:'+meta.color+'"></div></div>' +
+          '<div class="asset-bar-pct">'+a.alloc+'%</div>' +
+        '</div>' +
+        '<div class="asset-value"><div class="v-num">'+inr(a.value)+'</div><div class="v-lbl">Value</div></div>' +
+        '<div class="asset-pnl"><div class="v-num '+pnlCls+'">'+inr(a.pnl, true)+'</div><div class="v-lbl">P&amp;L</div></div>' +
+      '</div>'
+    );
+    $list.append(row);
+  });
+}
+
+function renderAssetsTab(assets){
+  var $body = $('#assetsTableBody').empty();
+  assets.forEach(function(a){
+    var meta = assetMeta(a.ticker);
+    var pnlCls = a.pnl > 0 ? 'pos' : (a.pnl < 0 ? 'neg' : '');
+    var pnlColor = a.pnl > 0 ? 'var(--mint)' : (a.pnl < 0 ? 'var(--coral)' : 'var(--text-dim)');
+    $body.append(
+      '<tr>' +
+        '<td><div class="d-flex align-items-center gap-2">' +
+          '<span class="asset-icon" style="width:28px;height:28px;font-size:.7rem;background:'+meta.color+'">'+a.ticker.charAt(0)+'</span>' +
+          '<div><div class="fw-semibold">'+a.ticker+'</div><div class="asset-ticker">'+meta.name+'</div></div>' +
+        '</div></td>' +
+        '<td>'+(a.trades||'\u2014')+'</td>' +
+        '<td>'+a.alloc+'%</td>' +
+        '<td class="font-mono">'+inr(a.value)+'</td>' +
+        '<td class="font-mono" style="color:'+pnlColor+';font-weight:700;">'+inr(a.pnl, true)+'</td>' +
+      '</tr>'
+    );
+  });
+  $('#assetsTabSub').text(assets.length + ' holdings');
+}
+
+/* ============================================================
+   RENDER: activity
+   ============================================================ */
+var ICONS = {
+  long: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17 17 5M9 5h8v8"/></svg>',
+  short: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7 17 19M17 7v12H5"/></svg>',
+  transfer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h13m0 0-4-4m4 4-4 4M17 17H4m0 0 4 4m-4-4 4-4"/></svg>'
+};
+function typeLabel(asset, type, leverage){
+  var lev = leverage ? ' \u00b7 ' + leverage : '';
+  if(type === 'long') return 'Long ' + asset + lev;
+  if(type === 'short') return 'Short ' + asset + lev;
+  return 'Transfer ' + (asset || '');
+}
+
+function renderActivity(filtered){
+  var $list = $('#activityList').empty();
+  var sorted = filtered.slice().sort(function(a,b){ return b.date - a.date; }).slice(0,8);
+  if(sorted.length === 0){
+    $list.append('<div class="card-sub py-3 text-center">No activity in this range.</div>');
+    return;
+  }
+  sorted.forEach(function(t){
+    var amt = t.type === 'transfer' ? t.value : (t.pnl || 0);
+    $list.append(
+      '<div class="act-row">' +
+        '<div class="act-tile '+t.type+'">'+(ICONS[t.type]||ICONS.long)+'</div>' +
+        '<div><div class="act-label">'+typeLabel(t.asset,t.type,t.leverage)+'</div><div class="act-time">'+fmtDMY(t.date)+'</div></div>' +
+        '<div class="act-amt '+(amt>=0?'pos':'neg')+'">'+inr(amt, true)+'</div>' +
+      '</div>'
+    );
+  });
+}
+
+function renderActivityTab(){
+  var $body = $('#activityTableBody').empty();
+  var rows = STATE.trades.slice().sort(function(a,b){ return b.date-a.date; });
+  rows.slice(0, 200).forEach(function(t){
+    var pnlColor = t.pnl > 0 ? 'var(--mint)' : (t.pnl < 0 ? 'var(--coral)' : 'var(--text-dim)');
+    var priceCell = (t.entryPrice != null && t.exitPrice != null)
+      ? t.entryPrice.toLocaleString('en-IN') + ' &rarr; ' + t.exitPrice.toLocaleString('en-IN')
+      : (t.leverage || '\u2014');
+    $body.append(
+      '<tr>' +
+        '<td class="font-mono">'+fmtDMY(t.date)+'</td>' +
+        '<td>'+t.asset+'</td>' +
+        '<td><span class="badge-type '+t.type+'">'+t.type+'</span></td>' +
+        '<td class="font-mono">'+priceCell+'</td>' +
+        '<td class="font-mono">'+inr(t.value)+'</td>' +
+        '<td class="font-mono" style="color:'+pnlColor+';font-weight:700;">'+inr(t.pnl, true)+'</td>' +
+      '</tr>'
+    );
+  });
+  $('#activityTabSub').text(rows.length + ' transactions');
+}
+
+/* ============================================================
+   MASTER RENDER
+   ============================================================ */
+function renderAll(){
+  var filtered = filterByRange(STATE.trades, STATE.range);
+  var assets = aggregateAssets(filtered);
+
+  renderStats(filtered, assets);
+  renderChart(filtered);
+  renderCalendar();
+  renderAssetFilters(assets);
+  renderAssetList(assets);
+  renderAssetsTab(assets);
+  renderActivity(filtered);
+  renderActivityTab();
+}
+
+/* ============================================================
+   GOOGLE SHEET SYNC
+   ============================================================ */
+function setStatus(kind, text){
+  $('#statusDot').attr('class', 'status-dot ' + kind);
+  $('#statusText').text(text);
+}
+
+function findKey(cols, aliases){
+  for(var i=0;i<cols.length;i++){
+    var c = cols[i];
+    for(var j=0;j<aliases.length;j++){
+      if(c === aliases[j]) return c;
+    }
+  }
+  return null;
+}
+
+function parseGvizDate(raw){
+  if(raw === null || raw === undefined) return null;
+  var s = String(raw);
+  var m = s.match(/Date\((\d+),(\d+),(\d+)/);
+  if(m) return new Date(parseInt(m[1],10), parseInt(m[2],10), parseInt(m[3],10));
+  var d = new Date(s);
+  if(!isNaN(d.getTime())) return d;
+  return null;
+}
+
+function fetchSheetRows(sheetId, sheetName){
+  var url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:json' + (sheetName ? '&sheet=' + encodeURIComponent(sheetName) : '');
+  return $.ajax({ url: url, dataType: 'text' }).then(function(res){
+    var start = res.indexOf('{'), end = res.lastIndexOf('}');
+    var json = JSON.parse(res.substring(start, end+1));
+    var cols = json.table.cols.map(function(c){ return String(c.label || c.id || '').trim().toLowerCase(); });
+    var rows = (json.table.rows || []).map(function(r){
+      var obj = {};
+      (r.c || []).forEach(function(cell, i){
+        obj[cols[i]] = cell ? (cell.v !== undefined ? cell.v : null) : null;
+        if(cell && cell.f !== undefined && cell.f !== null) obj[cols[i]+'__f'] = cell.f;
+      });
+      return obj;
+    });
+    return { cols: cols, rows: rows };
+  });
+}
+
+function rowsToTrades(parsed){
+  var cols = parsed.cols;
+  var dateKey   = findKey(cols, ['date','trade date','timestamp','closed date']);
+  var assetKey  = findKey(cols, ['asset','coin','ticker','symbol']);
+  var typeKey   = findKey(cols, ['side','type','action','direction','position']);
+  var valueKey  = findKey(cols, ['margin','value','amount','trade value','size']);
+  var pnlKey    = findKey(cols, ['pnl','p&l','profit','profit/loss','net']);
+  var levKey    = findKey(cols, ['leverage','lev']);
+  var feesKey   = findKey(cols, ['fees','fee']);
+  var statusKey = findKey(cols, ['status']);
+  var entryKey  = findKey(cols, ['entry price','entry']);
+  var exitKey   = findKey(cols, ['exit price','exit']);
+
+  var trades = [];
+  parsed.rows.forEach(function(r){
+    if(!dateKey || !assetKey) return;
+
+    if(statusKey){
+      var status = String(r[statusKey] || '').trim().toLowerCase();
+      if(status.indexOf('open') > -1) return; // only realised/closed trades count toward totals
+    }
+
+    var dateVal = r[dateKey+'__f'] || r[dateKey];
+    var d = parseGvizDate(dateVal);
+    if(!d) return;
+
+    var asset = String(r[assetKey] || '').trim().toUpperCase();
+    if(!asset) return;
+
+    var type = String(typeKey ? (r[typeKey]||'') : 'long').trim().toLowerCase();
+    if(type.indexOf('short') > -1 || type.indexOf('sell') > -1) type = 'short';
+    else if(type.indexOf('transfer') > -1) type = 'transfer';
+    else type = 'long';
+
+    var value = Math.abs(parseFloat(valueKey ? r[valueKey] : 0) || 0);
+    var pnl = parseFloat(pnlKey ? r[pnlKey] : 0) || 0;
+    var fees = feesKey ? Math.abs(parseFloat(r[feesKey]) || 0) : 0; // already reflected in PnL — not subtracted again
+
+    var leverage = levKey ? String(r[levKey] || '').trim() : '';
+    if(leverage && !/x$/i.test(leverage)) leverage += 'x';
+
+    var entryPrice = entryKey ? parseFloat(r[entryKey]) : null;
+    var exitPrice  = exitKey  ? parseFloat(r[exitKey])  : null;
+    if(isNaN(entryPrice)) entryPrice = null;
+    if(isNaN(exitPrice))  exitPrice  = null;
+
+    trades.push({ date:d, asset:asset, type:type, value:value, pnl:pnl, fees:fees, leverage:leverage || null, entryPrice:entryPrice, exitPrice:exitPrice });
+  });
+  return trades;
+}
+
+function syncSheet(){
+  var url = $('#sheetUrlInput').val();
+  var sheetId = extractSheetId(url);
+  if(!sheetId){
+    setStatus('error', 'Invalid sheet URL');
+    return;
+  }
+  $('#btnSync').prop('disabled', true).text('Syncing\u2026');
+  $('#btnRefresh').addClass('spinning');
+  setStatus('pending', 'Connecting\u2026');
+
+  fetchSheetRows(sheetId, SHEET_TAB_NAME).then(function(parsed){
+    var trades = rowsToTrades(parsed);
+    if(trades.length === 0){
+      setStatus('error', 'No valid rows found');
+      $('#btnSync').prop('disabled', false).text('Sync sheet');
+      $('#btnRefresh').removeClass('spinning');
+      return;
+    }
+    STATE.mode = 'live';
+    STATE.trades = trades;
+    // point the calendar at the most recent month of real data, and reset any stale custom range
+    var latest = trades.reduce(function(a,b){ return a.date > b.date ? a : b; });
+    STATE.calYear = latest.date.getFullYear();
+    STATE.calMonth = latest.date.getMonth();
+    setStatus('ok', 'Synced just now');
+    $('#demoBanner').slideUp(150);
+    var now = new Date();
+    $('#footerSync').text('Last synced from Google Sheets \u00b7 ' + now.toLocaleTimeString());
+    renderAll();
+    $('#btnSync').prop('disabled', false).text('Sync sheet');
+    $('#btnRefresh').removeClass('spinning');
+  }).catch(function(){
+    setStatus('error', 'Sync failed \u2014 showing demo data');
+    $('#btnSync').prop('disabled', false).text('Sync sheet');
+    $('#btnRefresh').removeClass('spinning');
+  });
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+$('#mainTabs .tab-btn').on('click', function(){
+  $('#mainTabs .tab-btn').removeClass('active');
+  $(this).addClass('active');
+  var pane = $(this).data('pane');
+  $('.section-pane').removeClass('active');
+  $('#pane-' + pane).addClass('active');
+});
+
+$('#rangePills button').on('click', function(){
+  $('#rangePills button').removeClass('active');
+  $(this).addClass('active');
+  STATE.range = $(this).data('range');
+  if(STATE.range === 'custom'){
+    $('#customRangeBox').slideDown(150);
+  } else {
+    $('#customRangeBox').slideUp(150);
+  }
+  renderAll();
+});
+
+$('#btnApplyCustom').on('click', function(){
+  var from = $('#customFrom').val();
+  var to = $('#customTo').val();
+  STATE.customFrom = from ? new Date(from + 'T00:00:00') : null;
+  STATE.customTo = to ? new Date(to + 'T23:59:59') : null;
+  renderAll();
+});
+
+$('#btnSync').on('click', syncSheet);
+$('#btnRefresh').on('click', function(){
+  if(STATE.mode === 'live') syncSheet();
+  else {
+    $(this).addClass('spinning');
+    setTimeout(function(){ $('#btnRefresh').removeClass('spinning'); renderAll(); }, 500);
+  }
+});
+$('#toggleHelp').on('click', function(){ $('#sheetHelp').slideToggle(150); });
+$('#closeDemoBanner').on('click', function(){ $('#demoBanner').slideUp(150); });
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function pad(n){ return n < 10 ? '0'+n : ''+n; }
+function toDateInputVal(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+
+STATE.trades = buildDemoTrades();
+
+var _now = new Date();
+var _monthStart = new Date(_now.getFullYear(), _now.getMonth(), 1);
+$('#customFrom').val(toDateInputVal(_monthStart));
+$('#customTo').val(toDateInputVal(_now));
+
+renderGreeting();
+setStatus('idle', 'Demo data');
+renderAll();
+
+});
+</script>
+</body>
+</html>
