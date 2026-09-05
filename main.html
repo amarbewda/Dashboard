@@ -259,11 +259,24 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
   padding:6px 12px; font-family:'JetBrains Mono'; font-size:.75rem; color:var(--text-dim);
 }
 .chart-wrap{ position:relative; margin-top: 10px; }
-.chart-wrap svg{ width:100%; height:auto; display:block; overflow:visible; }
+.chart-wrap svg{ width:100%; height:auto; display:block; overflow:visible; cursor:crosshair; }
 .chart-axis{ display:flex; justify-content:space-between; font-size:.72rem; color:var(--text-faint); margin-top:4px; font-family:'JetBrains Mono'; }
 .legend-row{ display:flex; gap:16px; margin-top:14px; }
 .legend-row .leg{ display:flex; align-items:center; gap:6px; font-size:.74rem; color:var(--text-dim); }
 .legend-row .dot{ width:9px; height:9px; border-radius:50%; }
+
+.chart-tooltip{
+  position:absolute; pointer-events:none; background:var(--surface-3); border:1px solid var(--border);
+  border-radius:10px; padding:8px 12px; font-size:.72rem; color:var(--text-dim);
+  transform:translate(-50%,-100%); margin-top:-10px; opacity:0; transition:opacity .1s ease;
+  white-space:nowrap; z-index:5; box-shadow:0 10px 26px rgba(0,0,0,.4);
+}
+.chart-tooltip.show{ opacity:1; }
+.chart-tooltip .tt-date{ font-family:'JetBrains Mono'; color:var(--text); font-weight:600; margin-bottom:5px; }
+.chart-tooltip .tt-row{ display:flex; align-items:center; gap:6px; }
+.chart-tooltip .tt-row + .tt-row{ margin-top:2px; }
+.chart-tooltip .tt-dot{ width:7px; height:7px; border-radius:50%; flex:none; }
+.chart-tooltip b{ color:var(--text); font-family:'JetBrains Mono'; }
 
 .pulse-end-dot{ filter: drop-shadow(0 0 6px var(--violet)); }
 .pulse-end-dot circle.ring{ animation: ringGrow 1.8s ease-out infinite; transform-origin:center; }
@@ -296,11 +309,26 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
 
 .cal-detail{
   margin-top:14px; background:var(--surface-3); border:1px solid var(--border);
-  border-radius:11px; padding:10px 14px; font-size:.78rem; color:var(--text-dim);
-  display:none; align-items:center; justify-content:space-between;
+  border-radius:11px; padding:12px 14px; font-size:.78rem; color:var(--text-dim);
+  display:none;
 }
-.cal-detail.show{ display:flex; }
+.cal-detail.show{ display:block; }
 .cal-detail b{ color:var(--text); }
+.cal-detail-head{ display:flex; align-items:center; justify-content:space-between; }
+.cal-detail-list{
+  margin-top:10px; display:flex; flex-direction:column; gap:6px;
+  max-height:180px; overflow-y:auto; padding-right:2px;
+}
+.cal-detail-row{
+  display:flex; align-items:center; gap:10px; background:var(--surface-2);
+  border:1px solid var(--border-soft); border-radius:8px; padding:7px 10px; font-size:.76rem;
+}
+.cal-detail-row .cdr-asset{ font-weight:700; color:var(--text); min-width:44px; }
+.cal-detail-row .cdr-side{ font-size:.64rem; padding:2px 8px; }
+.cal-detail-row .cdr-price{ flex:1; color:var(--text-faint); font-family:'JetBrains Mono'; font-size:.7rem; text-align:right; }
+.cal-detail-row .cdr-pnl{ font-family:'JetBrains Mono'; font-weight:700; min-width:80px; text-align:right; }
+.cal-detail-row .cdr-pnl.pos{ color:var(--mint); }
+.cal-detail-row .cdr-pnl.neg{ color:var(--coral); }
 
 /* asset performance */
 .asset-filters{ display:flex; gap:6px; background:var(--surface); border:1px solid var(--border); padding:4px; border-radius:999px; }
@@ -352,9 +380,13 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
 .table-pulse thead th{
   text-align:left; color:var(--text-faint); font-weight:600; font-size:.7rem; letter-spacing:.08em;
   text-transform:uppercase; padding: 10px 14px; border-bottom:1px solid var(--border);
+  position:sticky; top:0; background:var(--surface-2); z-index:2;
 }
 .table-pulse tbody td{ padding: 13px 14px; border-bottom:1px solid var(--border-soft); vertical-align:middle; }
 .table-pulse tbody tr:hover{ background: rgba(255,255,255,.02); }
+#pane-activity .table-responsive, #pane-assets .table-responsive{
+  max-height: 620px; overflow-y:auto;
+}
 .badge-type{ font-size:.68rem; font-weight:700; padding:4px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.03em; }
 .badge-type.long{ background:var(--violet-soft); color:#C9B4FF; }
 .badge-type.short{ background:var(--coral-soft); color:var(--coral); }
@@ -546,6 +578,7 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
 
           <div class="chart-wrap">
             <svg id="chartSvg" viewBox="0 0 960 300" preserveAspectRatio="none"></svg>
+            <div class="chart-tooltip" id="chartTooltip"></div>
           </div>
           <div class="chart-axis" id="chartAxis"></div>
           <div class="legend-row">
@@ -571,8 +604,11 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
           <div class="cal-grid" id="calGrid"></div>
 
           <div class="cal-detail" id="calDetail">
-            <span id="calDetailText">Select a date</span>
-            <span id="calDetailAmt"></span>
+            <div class="cal-detail-head">
+              <span id="calDetailText">Select a date</span>
+              <span id="calDetailAmt"></span>
+            </div>
+            <div class="cal-detail-list" id="calDetailList"></div>
           </div>
 
           <div class="d-flex justify-content-between align-items-center mt-3">
@@ -939,6 +975,9 @@ function renderChart(filtered){
   svg += '<path d="'+areaPath+'" fill="url(#fillViolet)" stroke="none"></path>';
   svg += '<path d="'+smoothPath(cPts)+'" fill="none" stroke="#FFC857" stroke-width="2.5" stroke-linecap="round"></path>';
   svg += '<path d="'+smoothPath(vPts)+'" fill="none" stroke="#8B5CF6" stroke-width="3" stroke-linecap="round"></path>';
+  svg += '<line id="chartHoverLine" x1="0" y1="'+padT+'" x2="0" y2="'+(H-padB)+'" stroke="rgba(255,255,255,.14)" stroke-width="1" style="opacity:0"></line>';
+  svg += '<circle id="chartHoverDotC" r="4" fill="#FFC857" stroke="#0B0B12" stroke-width="2" style="opacity:0"></circle>';
+  svg += '<circle id="chartHoverDotV" r="5" fill="#8B5CF6" stroke="#0B0B12" stroke-width="2" style="opacity:0"></circle>';
   svg += '<g class="pulse-end-dot">' +
            '<circle class="ring" cx="'+last.x+'" cy="'+last.y+'" r="4" fill="none" stroke="#8B5CF6" stroke-width="1.6"></circle>' +
            '<circle cx="'+last.x+'" cy="'+last.y+'" r="5" fill="#8B5CF6" stroke="#0B0B12" stroke-width="2"></circle>' +
@@ -946,12 +985,63 @@ function renderChart(filtered){
 
   $('#chartSvg').html(svg);
 
+  // hover data for tooltip lookup — one entry per rendered point (guard against the trivial fallback path)
+  var hoverData = (keys.length === valueSeries.length) ? keys.map(function(k,i){
+    return { x:vPts[i].x, y:vPts[i].y, cy:cPts[i].y, date:byDay[k].date, value:valueSeries[i], cost:costSeries[i] };
+  }) : [];
+  attachChartHover(hoverData);
+
   // axis: show ~5 evenly spaced labels
   var axisLabels = [];
   var step = Math.max(1, Math.floor(labels.length/5));
   for(var i=0;i<labels.length;i+=step){ axisLabels.push(labels[i]); }
   if(axisLabels[axisLabels.length-1] !== labels[labels.length-1]) axisLabels.push(labels[labels.length-1]);
   $('#chartAxis').html(axisLabels.map(function(l){ return '<span>'+l+'</span>'; }).join(''));
+}
+
+function attachChartHover(points){
+  var $svg = $('#chartSvg');
+  var $tooltip = $('#chartTooltip');
+  $svg.off('.chartHover');
+  if(!points.length) return;
+
+  function showAt(clientX, clientY){
+    var rect = $svg[0].getBoundingClientRect();
+    if(rect.width === 0) return;
+    var scaleX = rect.width / 960, scaleY = rect.height / 300;
+    var localX = (clientX - rect.left) / scaleX;
+
+    var nearest = points[0], minDist = Infinity;
+    points.forEach(function(p){
+      var dist = Math.abs(p.x - localX);
+      if(dist < minDist){ minDist = dist; nearest = p; }
+    });
+
+    $('#chartHoverLine').attr({ x1:nearest.x, x2:nearest.x }).css('opacity', 1);
+    $('#chartHoverDotV').attr({ cx:nearest.x, cy:nearest.y }).css('opacity', 1);
+    $('#chartHoverDotC').attr({ cx:nearest.x, cy:nearest.cy }).css('opacity', 1);
+
+    $tooltip.css({ left: (nearest.x * scaleX) + 'px', top: (nearest.y * scaleY) + 'px' })
+      .html(
+        '<div class="tt-date">'+fmtDMY(nearest.date)+'</div>' +
+        '<div class="tt-row"><span class="tt-dot" style="background:#8B5CF6"></span>Value <b>'+inr(nearest.value)+'</b></div>' +
+        '<div class="tt-row"><span class="tt-dot" style="background:#FFC857"></span>Invested <b>'+inr(nearest.cost)+'</b></div>'
+      ).addClass('show');
+  }
+  function hide(){
+    $tooltip.removeClass('show');
+    $('#chartHoverLine, #chartHoverDotV, #chartHoverDotC').css('opacity', 0);
+  }
+
+  $svg.on('mousemove.chartHover', function(e){ showAt(e.clientX, e.clientY); });
+  $svg.on('mouseleave.chartHover', hide);
+  $svg.on('touchmove.chartHover', function(e){
+    if(e.originalEvent.touches && e.originalEvent.touches[0]){
+      e.preventDefault();
+      showAt(e.originalEvent.touches[0].clientX, e.originalEvent.touches[0].clientY);
+    }
+  });
+  $svg.on('touchend.chartHover', hide);
 }
 
 /* ============================================================
@@ -1001,6 +1091,30 @@ $(document).on('click', '.cal-cell', function(){
   var day = $(this).data('day'), count = $(this).data('count'), net = $(this).data('net');
   $('#calDetailText').html('Day <b>'+day+'</b> &middot; <b>'+count+'</b> trade'+(count===1?'':'s'));
   $('#calDetailAmt').html('<span style="color:'+(net>=0?'var(--mint)':'var(--coral)')+';font-weight:700;">'+inr(net, true)+'</span>');
+
+  var dayTrades = STATE.trades.filter(function(t){
+    return t.date.getFullYear() === STATE.calYear && t.date.getMonth() === STATE.calMonth && t.date.getDate() === day;
+  }).sort(function(a,b){ return a.date - b.date; });
+
+  var $list = $('#calDetailList').empty();
+  if(dayTrades.length === 0){
+    $list.append('<div class="card-sub py-1">No individual trades logged for this day.</div>');
+  } else {
+    dayTrades.forEach(function(t){
+      var pnlCls = t.pnl > 0 ? 'pos' : (t.pnl < 0 ? 'neg' : '');
+      var priceBit = (t.entryPrice != null && t.exitPrice != null)
+        ? t.entryPrice.toLocaleString('en-IN') + ' \u2192 ' + t.exitPrice.toLocaleString('en-IN')
+        : (t.leverage || '');
+      $list.append(
+        '<div class="cal-detail-row">' +
+          '<span class="cdr-asset">'+t.asset+'</span>' +
+          '<span class="badge-type cdr-side '+t.type+'">'+t.type+'</span>' +
+          '<span class="cdr-price">'+priceBit+'</span>' +
+          '<span class="cdr-pnl '+pnlCls+'">'+inr(t.pnl, true)+'</span>' +
+        '</div>'
+      );
+    });
+  }
   $('#calDetail').addClass('show');
 });
 
