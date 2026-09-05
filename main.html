@@ -465,14 +465,16 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
 
   <div class="sheet-help-box" id="sheetHelp" style="display:none;">
     Share the Google Sheet with <b>“Anyone with the link can view”</b>, then paste its URL above and hit <b>Sync sheet</b>.
-    Pulse reads the <code>Dashboard-data</code> tab specifically and expects these columns (any order, any casing):
+    Pulse reads the <code>Dashboard-data</code> tab specifically and looks for these columns (any order, any casing):
     <div class="cols">
-      <span>Date</span><span>Asset</span><span>Side</span><span>Margin</span><span>Fees</span><span>Entry Price</span><span>Exit Price</span><span>PnL</span>
+      <span>Date</span><span>Asset</span><span>Side</span><span>Margin</span><span>Fees</span><span>Entry Price</span><span>Exit Price</span><span>Net Profit</span>
     </div>
-    <b>Side</b> is <code>Long</code>, <code>Short</code> or <code>Transfer</code>. <b>Margin</b> is the capital you put up for that
-    position in ₹ (drives Total amount &amp; allocation). <b>PnL</b> is treated as already net of fees, so it's used as-is —
-    <code>Fees</code> is still parsed and shown for reference but isn't subtracted again. <b>Entry Price</b> / <b>Exit Price</b>
-    show up in the Activity tab. Optional <code>Leverage</code> and <code>Status</code> columns are picked up too if present; rows with <code>Status = Open</code> are
+    <b>Side</b> is <code>Long</code>, <code>Short</code> or <code>Transfer</code>. <b>Net Profit</b> (not Gross) is used as the
+    realised P&amp;L — <code>Fees</code> is parsed and shown for reference but not subtracted again, since it's already reflected there.
+    If your <b>Margin</b> column actually holds a leverage multiplier like <code>40x</code> rather than a ₹ amount, Pulse detects
+    that automatically and uses it as leverage instead — falling back to <code>|P&amp;L|</code> as a rough size proxy for the
+    asset bars, since there's no real capital figure to total in that case. <code>Entry Price</code> / <code>Exit Price</code>
+    show up in the Activity tab, currency symbols and commas included. Optional <code>Status</code> is picked up too if present; rows with <code>Status = Open</code> are
     left out of realised totals until closed. Everything on this page — totals, the daily grid, the chart and the asset list —
     is recalculated live from those rows.
   </div>
@@ -1165,12 +1167,32 @@ function findKey(cols, aliases){
 
 function parseGvizDate(raw){
   if(raw === null || raw === undefined) return null;
-  var s = String(raw);
+  var s = String(raw).trim();
+  if(!s) return null;
   var m = s.match(/Date\((\d+),(\d+),(\d+)/);
   if(m) return new Date(parseInt(m[1],10), parseInt(m[2],10), parseInt(m[3],10));
+  // DD-MM-YYYY or DD/MM/YYYY (common non-US sheet format) — checked before the generic
+  // Date() fallback below, since new Date("28-08-2026") is ambiguous/wrong in most browsers.
+  var m2 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m2) return new Date(parseInt(m2[3],10), parseInt(m2[2],10)-1, parseInt(m2[1],10));
+  var m3 = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if(m3) return new Date(parseInt(m3[1],10), parseInt(m3[2],10)-1, parseInt(m3[3],10));
   var d = new Date(s);
   if(!isNaN(d.getTime())) return d;
   return null;
+}
+
+// Strips currency symbols / thousands separators ("$78,071.60", "₹325.95") before parsing.
+function parseNum(raw){
+  if(raw === null || raw === undefined) return NaN;
+  if(typeof raw === 'number') return raw;
+  var s = String(raw).replace(/[^0-9.\-]/g, '');
+  return s === '' ? NaN : parseFloat(s);
+}
+
+// Detects "40x" / "10x"-style leverage text so it doesn't get misread as a ₹ amount.
+function isLeverageLike(raw){
+  return /^\s*\d+(\.\d+)?\s*x\s*$/i.test(String(raw === null || raw === undefined ? '' : raw));
 }
 
 function fetchSheetRows(sheetId, sheetName){
@@ -1196,13 +1218,24 @@ function rowsToTrades(parsed){
   var dateKey   = findKey(cols, ['date','trade date','timestamp','closed date']);
   var assetKey  = findKey(cols, ['asset','coin','ticker','symbol']);
   var typeKey   = findKey(cols, ['side','type','action','direction','position']);
-  var valueKey  = findKey(cols, ['margin','value','amount','trade value','size']);
-  var pnlKey    = findKey(cols, ['pnl','p&l','profit','profit/loss','net']);
+  var valueKey  = findKey(cols, ['margin','value','amount','trade value','size','position size']);
+  // "Net Profit" must win over "Gross Profit" — checked as its own priority pass first.
+  var pnlKey    = findKey(cols, ['net profit','net p&l','net pnl']) || findKey(cols, ['pnl','p&l','profit','profit/loss','net']);
   var levKey    = findKey(cols, ['leverage','lev']);
   var feesKey   = findKey(cols, ['fees','fee']);
   var statusKey = findKey(cols, ['status']);
   var entryKey  = findKey(cols, ['entry price','entry']);
   var exitKey   = findKey(cols, ['exit price','exit']);
+
+  // Some sheets label a leverage column "Margin" (values like "40x") instead of a real ₹ amount.
+  // Detect that shape and re-route it to leverage instead of treating "40x" as ₹40.
+  if(valueKey && parsed.rows.length){
+    var sample = parsed.rows[0][valueKey+'__f'] || parsed.rows[0][valueKey];
+    if(isLeverageLike(sample)){
+      if(!levKey) levKey = valueKey;
+      valueKey = null;
+    }
+  }
 
   var trades = [];
   parsed.rows.forEach(function(r){
@@ -1213,8 +1246,8 @@ function rowsToTrades(parsed){
       if(status.indexOf('open') > -1) return; // only realised/closed trades count toward totals
     }
 
-    var dateVal = r[dateKey+'__f'] || r[dateKey];
-    var d = parseGvizDate(dateVal);
+    var d = parseGvizDate(r[dateKey]);
+    if(!d) d = parseGvizDate(r[dateKey+'__f']);
     if(!d) return;
 
     var asset = String(r[assetKey] || '').trim().toUpperCase();
@@ -1225,15 +1258,16 @@ function rowsToTrades(parsed){
     else if(type.indexOf('transfer') > -1) type = 'transfer';
     else type = 'long';
 
-    var value = Math.abs(parseFloat(valueKey ? r[valueKey] : 0) || 0);
-    var pnl = parseFloat(pnlKey ? r[pnlKey] : 0) || 0;
-    var fees = feesKey ? Math.abs(parseFloat(r[feesKey]) || 0) : 0; // already reflected in PnL — not subtracted again
+    var pnl = parseNum(pnlKey ? r[pnlKey] : 0) || 0;
+    // No real margin/₹-value column found — fall back to |P&L| as a rough activity-size proxy.
+    var value = valueKey ? Math.abs(parseNum(r[valueKey]) || 0) : Math.abs(pnl);
+    var fees = feesKey ? Math.abs(parseNum(r[feesKey]) || 0) : 0; // already reflected in Net Profit — not subtracted again
 
-    var leverage = levKey ? String(r[levKey] || '').trim() : '';
+    var leverage = levKey ? String(r[levKey+'__f'] || r[levKey] || '').trim() : '';
     if(leverage && !/x$/i.test(leverage)) leverage += 'x';
 
-    var entryPrice = entryKey ? parseFloat(r[entryKey]) : null;
-    var exitPrice  = exitKey  ? parseFloat(r[exitKey])  : null;
+    var entryPrice = entryKey ? parseNum(r[entryKey]) : null;
+    var exitPrice  = exitKey  ? parseNum(r[exitKey])  : null;
     if(isNaN(entryPrice)) entryPrice = null;
     if(isNaN(exitPrice))  exitPrice  = null;
 
