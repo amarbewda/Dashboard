@@ -472,6 +472,7 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
       <button data-range="week">This week</button>
       <button class="active" data-range="month">This month</button>
       <button data-range="year">This year</button>
+      <button data-range="overall">Overall</button>
       <button data-range="custom">Custom</button>
     </div>
 
@@ -814,6 +815,8 @@ function buildDemoTrades(){
    DATA AGGREGATION (works for both demo + live sheet rows)
    ============================================================ */
 function filterByRange(trades, range){
+  if(range === 'overall') return trades.slice();
+
   var now = new Date();
   var start, end = now;
   if(range === 'today'){
@@ -881,7 +884,7 @@ function aggregateDaily(trades, year, month){
 /* ============================================================
    RENDER: header / stats
    ============================================================ */
-var RANGE_LABELS = { today:'Today', week:'This week', month:'This month', year:'This year' };
+var RANGE_LABELS = { today:'Today', week:'This week', month:'This month', year:'This year', overall:'Overall' };
 function currentRangeLabel(){
   if(STATE.range === 'custom' && STATE.customFrom && STATE.customTo){
     return fmtShort(STATE.customFrom) + ' \u2013 ' + fmtShort(STATE.customTo);
