@@ -1280,9 +1280,9 @@ function renderActivity(){
   });
 }
 
-function renderActivityTab(){
+function renderActivityTab(filtered){
   var $body = $('#activityTableBody').empty();
-  var rows = STATE.trades.slice().sort(function(a,b){ return b.date-a.date; });
+  var rows = filtered.slice().sort(function(a,b){ return b.date-a.date; });
   rows.slice(0, 200).forEach(function(t){
     var pnlColor = t.pnl > 0 ? 'var(--mint)' : (t.pnl < 0 ? 'var(--coral)' : 'var(--text-dim)');
     var priceCell = (t.entryPrice != null && t.exitPrice != null)
@@ -1317,7 +1317,7 @@ function renderAll(){
   renderAssetList(topAssets);
   renderAssetsTab(assets);
   renderActivity();
-  renderActivityTab();
+  renderActivityTab(filtered);
 }
 
 /* ============================================================
