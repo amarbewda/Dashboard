@@ -167,6 +167,18 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
 .range-pills button.active{ background: var(--violet); color:#fff; }
 .range-pills button:hover:not(.active){ color:var(--text); }
 
+.gran-pills{
+  display:flex; gap:3px; background:var(--surface); border:1px solid var(--border);
+  padding:3px; border-radius:999px;
+}
+.gran-pills button{
+  border:none; background:transparent; color:var(--text-dim);
+  font-size:.74rem; font-weight:600; padding:6px 14px; border-radius:999px; cursor:pointer;
+  transition: all .15s ease;
+}
+.gran-pills button.active{ background: var(--violet); color:#fff; }
+.gran-pills button:hover:not(.active){ color:var(--text); }
+
 .sheet-connector{
   display:flex; align-items:center; gap:10px; background:var(--surface);
   border:1px solid var(--border); border-radius:999px; padding:6px 8px 6px 16px;
@@ -337,6 +349,8 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
   padding:6px 14px; border-radius:999px; cursor:pointer; transition: all .15s ease;
 }
 .asset-filters button.active{ background:var(--text); color:#0B0B12; }
+
+.scroll-list{ max-height: 380px; overflow-y:auto; padding-right:4px; }
 
 .asset-row{ display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid var(--border-soft); }
 .asset-row:last-child{ border-bottom:none; padding-bottom:2px; }
@@ -565,7 +579,7 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
         <div class="card-pulse h-100">
           <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
             <div>
-              <div class="card-title">Portfolio value</div>
+              <div class="card-title">Margin &amp; P&amp;L</div>
               <div class="d-flex align-items-center gap-2 mt-2">
                 <span class="chart-big-value" id="chartBigValue">₹0</span>
                 <span class="chip-change" id="chartChip">↗ 0%</span>
@@ -577,14 +591,25 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
             </div>
           </div>
 
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+            <span class="card-sub">Timeframe</span>
+            <div class="gran-pills" id="chartGranPills">
+              <button data-gran="daily" class="active">Daily</button>
+              <button data-gran="weekly">Weekly</button>
+              <button data-gran="monthly">Monthly</button>
+              <button data-gran="yearly">Yearly</button>
+            </div>
+          </div>
+
           <div class="chart-wrap">
             <svg id="chartSvg" viewBox="0 0 960 300" preserveAspectRatio="none"></svg>
             <div class="chart-tooltip" id="chartTooltip"></div>
           </div>
           <div class="chart-axis" id="chartAxis"></div>
           <div class="legend-row">
-            <span class="leg"><span class="dot" style="background:var(--violet)"></span>Portfolio value</span>
-            <span class="leg"><span class="dot" style="background:var(--gold)"></span>Capital invested</span>
+            <span class="leg"><span class="dot" style="background:var(--gold)"></span>Margin invested</span>
+            <span class="leg"><span class="dot" style="background:var(--mint)"></span>Profit</span>
+            <span class="leg"><span class="dot" style="background:var(--coral)"></span>Loss</span>
           </div>
         </div>
       </div>
@@ -628,19 +653,25 @@ h1.greeting{ font-family:'Space Grotesk'; font-weight:700; font-size:2.1rem; let
       <div class="col-lg-7">
         <div class="card-pulse h-100">
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div class="card-title">Asset performance</div>
+            <div>
+              <div class="card-title">Asset performance</div>
+              <div class="card-sub">Top 10 by P&amp;L</div>
+            </div>
             <div class="asset-filters" id="assetFilters"></div>
           </div>
-          <div id="assetList" class="mt-2"></div>
+          <div id="assetList" class="mt-2 scroll-list"></div>
         </div>
       </div>
       <div class="col-lg-5">
         <div class="card-pulse h-100">
           <div class="d-flex justify-content-between align-items-center">
-            <div class="card-title">Recent activity</div>
+            <div>
+              <div class="card-title">Recent activity</div>
+              <div class="card-sub">Last 7 days</div>
+            </div>
             <button class="icon-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>
           </div>
-          <div id="activityList" class="mt-2"></div>
+          <div id="activityList" class="mt-2 scroll-list"></div>
         </div>
       </div>
     </div>
@@ -729,7 +760,8 @@ var STATE = {
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
   customFrom: null,
-  customTo: null
+  customTo: null,
+  chartGranularity: 'daily'
 };
 
 /* ============================================================
@@ -921,84 +953,100 @@ function renderStats(filtered, allAssets){
 /* ============================================================
    RENDER: chart
    ============================================================ */
+var MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function bucketTrades(trades, granularity){
+  var map = {};
+  trades.forEach(function(t){
+    var d = t.date, key, label, sortKey;
+    if(granularity === 'weekly'){
+      var ws = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
+      key = fmtDMY(ws); label = fmtShort(ws); sortKey = ws.getTime();
+    } else if(granularity === 'monthly'){
+      key = d.getFullYear()+'-'+d.getMonth();
+      label = MONTH_SHORT[d.getMonth()]+' '+d.getFullYear();
+      sortKey = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    } else if(granularity === 'yearly'){
+      key = ''+d.getFullYear();
+      label = ''+d.getFullYear();
+      sortKey = new Date(d.getFullYear(), 0, 1).getTime();
+    } else { // daily
+      key = fmtDMY(d); label = fmtShort(d);
+      sortKey = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    }
+    if(!map[key]) map[key] = { label:label, sortKey:sortKey, margin:0, pnl:0 };
+    // "Margin invested" tracks capital deployed in that bucket (transfers move cash, not margin).
+    map[key].margin += (t.type === 'transfer') ? 0 : t.value;
+    map[key].pnl += (t.pnl || 0);
+  });
+  var buckets = Object.keys(map).map(function(k){ return map[k]; });
+  buckets.sort(function(a,b){ return a.sortKey - b.sortKey; });
+  return buckets;
+}
+
 function renderChart(filtered){
-  var W = 960, H = 300, padL = 8, padR = 8, padT = 20, padB = 14;
-  var valueSeries, costSeries, labels;
+  var W = 960, H = 300, padL = 10, padR = 10, padT = 20, padB = 26;
 
-  var series = filtered.slice().sort(function(a,b){ return a.date-b.date; });
-  if(series.length === 0){ series = STATE.trades.slice().sort(function(a,b){ return a.date-b.date; }); }
-  var byDay = {};
-  series.forEach(function(t){
-    var key = fmtDMY(t.date);
-    if(!byDay[key]) byDay[key] = { pnl:0, invested:0, date:t.date };
-    byDay[key].pnl += (t.pnl||0);
-    // "Capital invested" tracks margin deployed that day (transfers move cash, not margin).
-    byDay[key].invested += (t.type === 'transfer') ? 0 : t.value;
-  });
-  var keys = Object.keys(byDay).sort(function(a,b){ return byDay[a].date - byDay[b].date; });
-  var base = 0, cumPnl = 0, cumInvested = 0;
-  valueSeries = []; costSeries = []; labels = [];
-  keys.forEach(function(k){
-    cumPnl += byDay[k].pnl;
-    cumInvested += byDay[k].invested;
-    valueSeries.push(base + cumInvested + cumPnl);
-    costSeries.push(base + cumInvested);
-    labels.push(fmtShort(byDay[k].date));
-  });
-  if(valueSeries.length < 2){ valueSeries = [0,0]; costSeries=[0,0]; labels=['','']; }
+  var source = filtered.length ? filtered : STATE.trades;
+  var buckets = bucketTrades(source, STATE.chartGranularity);
 
-  var allVals = valueSeries.concat(costSeries);
-  var min = Math.min.apply(null, allVals), max = Math.max.apply(null, allVals);
-  if(min === max){ min -= 100; max += 100; }
-  var range = (max - min) * 1.15;
-  min = min - (range-(max-min))/2;
+  var marginTotal = buckets.reduce(function(s,b){ return s + b.margin; }, 0);
+  var netTotal = buckets.reduce(function(s,b){ return s + b.pnl; }, 0);
+  var roi = marginTotal > 0 ? (netTotal / marginTotal * 100) : 0;
+  $('#chartBigValue').text(inr(netTotal, true)).toggleClass('c-mint', netTotal >= 0).toggleClass('c-coral', netTotal < 0);
+  $('#chartChip').html((netTotal >= 0 ? '&#8599; ' : '&#8600; ') + Math.abs(roi).toFixed(1) + '%').toggleClass('neg', netTotal < 0);
 
-  function mapPoints(series){
-    var n = series.length;
-    return series.map(function(v,i){
-      var x = padL + (i/(n-1)) * (W - padL - padR);
-      var y = padT + (1 - (v-min)/range) * (H - padT - padB);
-      return { x:x, y:y };
-    });
+  if(buckets.length === 0){
+    $('#chartSvg').empty();
+    $('#chartAxis').empty();
+    attachChartHover([]);
+    return;
   }
 
-  var vPts = mapPoints(valueSeries);
-  var cPts = mapPoints(costSeries);
-  var last = vPts[vPts.length-1];
+  var margins = buckets.map(function(b){ return b.margin; });
+  var pnls = buckets.map(function(b){ return b.pnl; });
+  var maxVal = Math.max(0, Math.max.apply(null, margins), Math.max.apply(null, pnls));
+  var minVal = Math.min(0, Math.min.apply(null, pnls));
+  if(maxVal === minVal) maxVal += 100;
+  var pad = (maxVal - minVal) * 0.15 || 100;
+  var domainMax = maxVal + pad;
+  var domainMin = Math.min(0, minVal - pad);
+  var domainRange = domainMax - domainMin;
+
+  function valueToY(v){ return padT + (1 - (v - domainMin)/domainRange) * (H - padT - padB); }
+  var zeroY = valueToY(0);
+
+  var n = buckets.length;
+  function xAt(i){ return n === 1 ? (padL + (W-padL-padR)/2) : padL + (i/(n-1)) * (W - padL - padR); }
+
+  var mPts = buckets.map(function(b,i){ return { x:xAt(i), y:valueToY(b.margin) }; });
+  var pPts = buckets.map(function(b,i){ return { x:xAt(i), y:valueToY(b.pnl) }; });
+  var lastP = pPts[pPts.length-1];
 
   var svg = '';
-  svg += '<defs>' +
-           '<linearGradient id="fillViolet" x1="0" y1="0" x2="0" y2="1">' +
-             '<stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.22"/>' +
-             '<stop offset="100%" stop-color="#8B5CF6" stop-opacity="0"/>' +
-           '</linearGradient>' +
-         '</defs>';
-
-  var areaPath = smoothPath(vPts) + ' L ' + vPts[vPts.length-1].x + ' ' + (H-padB) + ' L ' + vPts[0].x + ' ' + (H-padB) + ' Z';
-  svg += '<path d="'+areaPath+'" fill="url(#fillViolet)" stroke="none"></path>';
-  svg += '<path d="'+smoothPath(cPts)+'" fill="none" stroke="#FFC857" stroke-width="2.5" stroke-linecap="round"></path>';
-  svg += '<path d="'+smoothPath(vPts)+'" fill="none" stroke="#8B5CF6" stroke-width="3" stroke-linecap="round"></path>';
+  svg += '<line x1="'+padL+'" y1="'+zeroY+'" x2="'+(W-padR)+'" y2="'+zeroY+'" stroke="rgba(255,255,255,.14)" stroke-width="1"></line>';
+  svg += '<path d="'+smoothPath(mPts)+'" fill="none" stroke="#FFC857" stroke-width="2.5" stroke-linecap="round"></path>';
+  svg += '<path d="'+smoothPath(pPts)+'" fill="none" stroke="#8B5CF6" stroke-width="3" stroke-linecap="round"></path>';
   svg += '<line id="chartHoverLine" x1="0" y1="'+padT+'" x2="0" y2="'+(H-padB)+'" stroke="rgba(255,255,255,.14)" stroke-width="1" style="opacity:0"></line>';
-  svg += '<circle id="chartHoverDotC" r="4" fill="#FFC857" stroke="#0B0B12" stroke-width="2" style="opacity:0"></circle>';
-  svg += '<circle id="chartHoverDotV" r="5" fill="#8B5CF6" stroke="#0B0B12" stroke-width="2" style="opacity:0"></circle>';
+  svg += '<circle id="chartHoverDotMargin" r="4" fill="#FFC857" stroke="#0B0B12" stroke-width="2" style="opacity:0"></circle>';
+  svg += '<circle id="chartHoverDotPnl" r="5" fill="#8B5CF6" stroke="#0B0B12" stroke-width="2" style="opacity:0"></circle>';
   svg += '<g class="pulse-end-dot">' +
-           '<circle class="ring" cx="'+last.x+'" cy="'+last.y+'" r="4" fill="none" stroke="#8B5CF6" stroke-width="1.6"></circle>' +
-           '<circle cx="'+last.x+'" cy="'+last.y+'" r="5" fill="#8B5CF6" stroke="#0B0B12" stroke-width="2"></circle>' +
+           '<circle class="ring" cx="'+lastP.x+'" cy="'+lastP.y+'" r="4" fill="none" stroke="#8B5CF6" stroke-width="1.6"></circle>' +
+           '<circle cx="'+lastP.x+'" cy="'+lastP.y+'" r="5" fill="#8B5CF6" stroke="#0B0B12" stroke-width="2"></circle>' +
          '</g>';
 
   $('#chartSvg').html(svg);
 
-  // hover data for tooltip lookup — one entry per rendered point (guard against the trivial fallback path)
-  var hoverData = (keys.length === valueSeries.length) ? keys.map(function(k,i){
-    return { x:vPts[i].x, y:vPts[i].y, cy:cPts[i].y, date:byDay[k].date, value:valueSeries[i], cost:costSeries[i] };
-  }) : [];
+  var hoverData = buckets.map(function(b,i){
+    return { x:mPts[i].x, my:mPts[i].y, py:pPts[i].y, label:b.label, margin:b.margin, pnl:b.pnl };
+  });
   attachChartHover(hoverData);
 
-  // axis: show ~5 evenly spaced labels
+  // axis labels: thin out if there are lots of buckets (e.g. daily over a year)
   var axisLabels = [];
-  var step = Math.max(1, Math.floor(labels.length/5));
-  for(var i=0;i<labels.length;i+=step){ axisLabels.push(labels[i]); }
-  if(axisLabels[axisLabels.length-1] !== labels[labels.length-1]) axisLabels.push(labels[labels.length-1]);
+  var step = Math.max(1, Math.ceil(n/8));
+  for(var i=0;i<n;i+=step){ axisLabels.push(buckets[i].label); }
+  if(axisLabels[axisLabels.length-1] !== buckets[n-1].label) axisLabels.push(buckets[n-1].label);
   $('#chartAxis').html(axisLabels.map(function(l){ return '<span>'+l+'</span>'; }).join(''));
 }
 
@@ -1008,7 +1056,7 @@ function attachChartHover(points){
   $svg.off('.chartHover');
   if(!points.length) return;
 
-  function showAt(clientX, clientY){
+  function showAt(clientX){
     var rect = $svg[0].getBoundingClientRect();
     if(rect.width === 0) return;
     var scaleX = rect.width / 960, scaleY = rect.height / 300;
@@ -1021,27 +1069,27 @@ function attachChartHover(points){
     });
 
     $('#chartHoverLine').attr({ x1:nearest.x, x2:nearest.x }).css('opacity', 1);
-    $('#chartHoverDotV').attr({ cx:nearest.x, cy:nearest.y }).css('opacity', 1);
-    $('#chartHoverDotC').attr({ cx:nearest.x, cy:nearest.cy }).css('opacity', 1);
+    $('#chartHoverDotMargin').attr({ cx:nearest.x, cy:nearest.my }).css('opacity', 1);
+    $('#chartHoverDotPnl').attr({ cx:nearest.x, cy:nearest.py }).css('opacity', 1);
 
-    $tooltip.css({ left: (nearest.x * scaleX) + 'px', top: (nearest.y * scaleY) + 'px' })
+    $tooltip.css({ left: (nearest.x * scaleX) + 'px', top: (Math.min(nearest.my, nearest.py) * scaleY) + 'px' })
       .html(
-        '<div class="tt-date">'+fmtDMY(nearest.date)+'</div>' +
-        '<div class="tt-row"><span class="tt-dot" style="background:#8B5CF6"></span>Value <b>'+inr(nearest.value)+'</b></div>' +
-        '<div class="tt-row"><span class="tt-dot" style="background:#FFC857"></span>Invested <b>'+inr(nearest.cost)+'</b></div>'
+        '<div class="tt-date">'+nearest.label+'</div>' +
+        '<div class="tt-row"><span class="tt-dot" style="background:#FFC857"></span>Margin <b>'+inr(nearest.margin)+'</b></div>' +
+        '<div class="tt-row"><span class="tt-dot" style="background:'+(nearest.pnl>=0?'#2FE6A7':'#FF5C77')+'"></span>P&amp;L <b>'+inr(nearest.pnl, true)+'</b></div>'
       ).addClass('show');
   }
   function hide(){
     $tooltip.removeClass('show');
-    $('#chartHoverLine, #chartHoverDotV, #chartHoverDotC').css('opacity', 0);
+    $('#chartHoverLine, #chartHoverDotMargin, #chartHoverDotPnl').css('opacity', 0);
   }
 
-  $svg.on('mousemove.chartHover', function(e){ showAt(e.clientX, e.clientY); });
+  $svg.on('mousemove.chartHover', function(e){ showAt(e.clientX); });
   $svg.on('mouseleave.chartHover', hide);
   $svg.on('touchmove.chartHover', function(e){
     if(e.originalEvent.touches && e.originalEvent.touches[0]){
       e.preventDefault();
-      showAt(e.originalEvent.touches[0].clientX, e.originalEvent.touches[0].clientY);
+      showAt(e.originalEvent.touches[0].clientX);
     }
   });
   $svg.on('touchend.chartHover', hide);
@@ -1125,12 +1173,11 @@ $(document).on('click', '.cal-cell', function(){
    RENDER: asset performance (overview list + filters + full tab)
    ============================================================ */
 var assetFilterActive = 'ALL';
+var ASSET_FILTER_TICKERS = ['ALL','BTC','ETH','SOL','HYPE','XPR'];
 
 function renderAssetFilters(assets){
   var $f = $('#assetFilters').empty();
-  var tickers = assets.map(function(a){ return a.ticker; });
-  var opts = ['ALL'].concat(tickers.slice(0,3));
-  opts.forEach(function(t){
+  ASSET_FILTER_TICKERS.forEach(function(t){
     var $b = $('<button>'+(t==='ALL'?'All':t)+'</button>');
     if(t === assetFilterActive) $b.addClass('active');
     $b.on('click', function(){
@@ -1146,6 +1193,11 @@ function renderAssetFilters(assets){
 function renderAssetList(assets){
   var $list = $('#assetList').empty();
   var filtered = assetFilterActive === 'ALL' ? assets : assets.filter(function(a){ return a.ticker === assetFilterActive; });
+
+  if(filtered.length === 0){
+    $list.append('<div class="card-sub py-3 text-center">No trades for this asset in range.</div>');
+    return;
+  }
 
   filtered.forEach(function(a){
     var meta = assetMeta(a.ticker);
@@ -1206,11 +1258,14 @@ function typeLabel(asset, type, leverage){
   return 'Transfer ' + (asset || '');
 }
 
-function renderActivity(filtered){
+function renderActivity(){
   var $list = $('#activityList').empty();
-  var sorted = filtered.slice().sort(function(a,b){ return b.date - a.date; }).slice(0,8);
+  var now = new Date();
+  var weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+  var sorted = STATE.trades.filter(function(t){ return t.date >= weekAgo && t.date <= now; })
+    .sort(function(a,b){ return b.date - a.date; });
   if(sorted.length === 0){
-    $list.append('<div class="card-sub py-3 text-center">No activity in this range.</div>');
+    $list.append('<div class="card-sub py-3 text-center">No activity in the last 7 days.</div>');
     return;
   }
   sorted.forEach(function(t){
@@ -1253,14 +1308,15 @@ function renderActivityTab(){
 function renderAll(){
   var filtered = filterByRange(STATE.trades, STATE.range);
   var assets = aggregateAssets(filtered);
+  var topAssets = assets.slice().sort(function(a,b){ return b.pnl - a.pnl; }).slice(0, 10);
 
   renderStats(filtered, assets);
   renderChart(filtered);
   renderCalendar();
-  renderAssetFilters(assets);
-  renderAssetList(assets);
+  renderAssetFilters(topAssets);
+  renderAssetList(topAssets);
   renderAssetsTab(assets);
-  renderActivity(filtered);
+  renderActivity();
   renderActivityTab();
 }
 
@@ -1461,6 +1517,13 @@ $('#btnApplyCustom').on('click', function(){
   STATE.customFrom = from ? new Date(from + 'T00:00:00') : null;
   STATE.customTo = to ? new Date(to + 'T23:59:59') : null;
   renderAll();
+});
+
+$('#chartGranPills button').on('click', function(){
+  $('#chartGranPills button').removeClass('active');
+  $(this).addClass('active');
+  STATE.chartGranularity = $(this).data('gran');
+  renderChart(filterByRange(STATE.trades, STATE.range));
 });
 
 $('#btnSync').on('click', syncSheet);
